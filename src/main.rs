@@ -7,7 +7,7 @@ fn main() -> Result<(), helper::GooglePayError> {
         "keyExpiration": "32506264800000",
         "protocolVersion": "ECv2",
     })]; // Initialize with real root keys
-    let recipient_id = "merchant:12345678901234567890".to_string();
+    let recipient_id = "someRecipient".to_string();
     let private_key = "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgCPSuFr4iSIaQprjjchHPyDu2NXFe0vDBoTpPkYaK9dehRANCAATnaFz/vQKuO90pxsINyVNWojabHfbx9qIJ6uD7Q7ZSxmtyo/Ez3/o2kDT8g0pIdyVIYktCsq65VoQIDWSh2Bdm".as_bytes(); // Insert private key bytes here
 
     // Create decryptor instance
