@@ -37,7 +37,6 @@ impl std::fmt::Display for GooglePayError {
 
 // Structs for keys and the main decryptor
 pub struct GooglePayTokenDecryptor {
-    #[allow(dead_code)]
     root_signing_keys: Vec<GooglePayRootSigningKey>,
     recipient_id: String,
     private_key: PKey<Private>,
@@ -89,13 +88,13 @@ pub enum GooglePayProtocolVersion {
 }
 
 // Check expiration date validity
-fn check_expiration_date_is_valid(expiration: &str) -> bool {
+fn check_expiration_date_is_valid(expiration: &str) -> Result<bool, GooglePayError> {
     let expiration_ms: u64 = expiration.parse().unwrap_or(0);
     let current_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
         .as_millis() as u64;
-    current_ms < expiration_ms
+    Ok(current_ms < expiration_ms)
 }
 
 // Construct little endian format of u32 in hexadecimal
@@ -118,7 +117,10 @@ fn filter_root_signing_keys(root_keys: Vec<Value>) -> Vec<GooglePayRootSigningKe
         .iter()
         .filter(|key| {
             key.protocol_version == GooglePayProtocolVersion::EcProtocalVersion2
-                && check_expiration_date_is_valid(&key.key_expiration)
+                && matches!(
+                    check_expiration_date_is_valid(&key.key_expiration),
+                    Ok(true)
+                )
         })
         .cloned()
         .collect::<Vec<GooglePayRootSigningKey>>()
@@ -215,8 +217,11 @@ impl GooglePayTokenDecryptor {
             .map_err(|_| GooglePayError("Failed to get the decrypted data".to_string()))?;
 
         // check the expiration date of the decrypted data
-        if !check_expiration_date_is_valid(
-            decrypted_data["messageExpiration"].as_str().unwrap_or(""),
+        if !matches!(
+            check_expiration_date_is_valid(
+                decrypted_data["messageExpiration"].as_str().unwrap_or("")
+            ),
+            Ok(true)
         ) {
             return Err(GooglePayError("The token has expired".to_string()));
         }
@@ -330,7 +335,10 @@ impl GooglePayTokenDecryptor {
         let signed_key: GooglePaySignedKey =
             serde_json::from_str(&intermediate_signing_key.signed_key)
                 .map_err(|_| GooglePayError("Failed to parse the signed key".to_string()))?;
-        if !check_expiration_date_is_valid(&signed_key.key_expiration) {
+        if !matches!(
+            check_expiration_date_is_valid(&signed_key.key_expiration),
+            Ok(true)
+        ) {
             return Err(GooglePayError("The signed key has expired".to_string()));
         }
         Ok(signed_key)
